@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+env/
+*.db
+
+# Data & Models
+# (Now tracked so the deployed site has access to the corpora and pre-trained models)
+
+# macOS
+.DS_Store
