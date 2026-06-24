@@ -311,12 +311,17 @@ def render_resume_editor():
     # Initialize structured lists from plain text area states
     init_structured_lists()
     
-    # Helper to convert PDF to base64 iframe html
-    def get_pdf_html(pdf_path):
-        with open(pdf_path, "rb") as f:
-            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800px" type="application/pdf" style="border: 1px solid #cbd5e1; border-radius: 8px;"></iframe>'
-        return pdf_display
+    # Helper to render PDF pages as images to bypass Chrome security blocks
+    def display_pdf_as_images(pdf_path):
+        import fitz
+        try:
+            doc = fitz.open(pdf_path)
+            for page in doc:
+                pix = page.get_pixmap(dpi=150)
+                img_data = pix.tobytes("png")
+                st.image(img_data, use_container_width=True)
+        except Exception as e:
+            st.error(f"Could not render PDF preview: {e}")
 
     # Divide screen into Edit Controls (Left) and Live PDF Preview (Right)
     col_edit, col_preview = st.columns([1.1, 0.9])
@@ -744,9 +749,8 @@ Do NOT output any markdown code block backticks (```json or ```), styling, or ex
                     skills_soft=st.session_state.edit_skills_soft
                 )
                 
-                # Show PDF in Iframe
-                pdf_html = get_pdf_html(output_path)
-                st.markdown(pdf_html, unsafe_allow_html=True)
+                # Show PDF as images instead of an iframe to bypass Chrome security blocks
+                display_pdf_as_images(output_path)
                 
                 # Download button below the preview
                 st.markdown(" ")
