@@ -7,7 +7,8 @@ from analyzer import extract_skills
 from resume_builder import generate_cover_letter_pdf
 from llm_utils import call_groq_api
 
-st.set_page_config(page_title="Custom Job Scanner", page_icon="🎯", layout="wide")
+
+
 
 st.markdown("""
 <style>

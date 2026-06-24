@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 from database import get_all_candidates
 
-st.set_page_config(page_title="HR Admin Dashboard", page_icon="👔", layout="wide")
+
+
 
 st.markdown("""
 <style>

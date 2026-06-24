@@ -2,7 +2,8 @@ import streamlit as st
 import random
 import re
 
-st.set_page_config(page_title="Interview Grader", page_icon="🎙️", layout="wide")
+
+
 
 st.markdown("""
 <style>

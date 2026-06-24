@@ -9,7 +9,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import time
 
-st.set_page_config(page_title="Academic Search Engine", page_icon="🔍", layout="wide")
+
+
 
 st.markdown("""
 <style>

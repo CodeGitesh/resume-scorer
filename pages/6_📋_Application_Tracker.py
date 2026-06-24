@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 from database import insert_application, get_all_applications, update_application_status
 
-st.set_page_config(page_title="Application Tracker", page_icon="📋", layout="wide")
+
+
 
 st.markdown("""
 <style>

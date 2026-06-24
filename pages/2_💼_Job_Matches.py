@@ -4,7 +4,8 @@ import tempfile
 from job_matcher import recommend_jobs
 from resume_builder import generate_cover_letter_pdf
 
-st.set_page_config(page_title="Job Matches", page_icon="💼", layout="wide")
+
+
 
 st.markdown("""
 <style>

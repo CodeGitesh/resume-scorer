@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 import time
 
-st.set_page_config(page_title="Evaluation Metrics", page_icon="📈", layout="wide")
+
+
 
 st.title("📈 Information Retrieval Evaluation Metrics")
 st.markdown("Quantitative analysis of TF-IDF and BM25 ranking performance using standard IR metrics (Precision@K, Recall, F1).")

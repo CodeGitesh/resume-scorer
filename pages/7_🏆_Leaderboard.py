@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 from database import get_leaderboard_data
 
-st.set_page_config(page_title="Global Leaderboard", page_icon="🏆", layout="wide")
+
+
 
 st.title("🏆 Global Candidate Leaderboard")
 st.markdown("Rankings are computed using **Industry Centroid Cosine Similarity** combined with **NLP Heuristic Health Scores**.")
