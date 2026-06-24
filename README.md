@@ -24,7 +24,7 @@ The platform is built using **Streamlit** for the frontend, **SQLite** for persi
 * **Multi-tier Education Grade Selector**: Add grades using dropdowns for CGPA, GPA, Class 10/12 %, and Percentage.
 * **Individual AI Card Enhancers**: Focus-enhance a single project card or achievement bullet instantly using Groq Llama-3.3 (following the Google X-Y-Z formula: *Accomplished [X] as measured by [Y], by doing [Z]*) without changing the rest of the document.
 * **Layout & Style Engine**: Customize layouts (Clean, Classic, Vivid, Modern Two-Column), font families (Helvetica, Times, Courier), page sizes, page margins, and color palettes (Dark Blue, Black, Green, Slate Grey, Crimson Red).
-* **Live PDF Compiler**: Instantly compiles code changes into a professional PDF layout in the background using `fpdf2` and renders it inside an in-browser iframe.
+* **Live PDF Compiler**: Instantly compiles edits into HTML and prints it to a high-fidelity PDF using **Playwright** Chromium headless browser in the background, rendering it inside an in-browser iframe.
 
 ### 3. 🤖 Groq AI Resume Optimizer (`pages/1_🏠_Candidate_Portal.py`)
 * **Selected Section Enhancement**: Enhances specific checked sections (Summary, Skills, Experience, Education, Projects, Achievements) via Llama-3.3.
@@ -32,7 +32,7 @@ The platform is built using **Streamlit** for the frontend, **SQLite** for persi
 
 ### 4. 💼 Job Matches & Tailored Cover Letters (`pages/2_💼_Job_Matches.py`)
 * **Semantic Recommendation Engine**: Matches candidate resumes against the database job corpus using TF-IDF and Cosine Similarity.
-* **Cover Letter Generator**: Generates a tailored Cover Letter PDF aligning candidate skills with the recommended position.
+* **Cover Letter Generator**: Generates a tailored Cover Letter PDF matching candidate profile to jobs using the **FPDF2** library.
 
 ### 5. 🎯 Custom Job Scanner (`pages/5_🎯_Jobscan_Matcher.py`)
 * Paste a custom target job description to run a TF-IDF scan showing match percentages, matching keywords, and missing gap keywords.
@@ -88,7 +88,7 @@ The platform is built using **Streamlit** for the frontend, **SQLite** for persi
 * **AI/LLM Orchestration**: Groq API (`llama-3.3-70b-versatile`)
 * **Vector Embeddings & NLP**: Scikit-Learn, NLTK
 * **Data Visualization**: Matplotlib
-* **PDF Engine**: FPDF2
+* **PDF & Printing Engines**: Playwright (for high-fidelity resume HTML-to-PDF printing), FPDF2 (for Cover Letter PDF generation)
 * **Database**: SQLite3
 * **Text Extraction**: PyMuPDF (fitz)
 
