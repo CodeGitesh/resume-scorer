@@ -391,8 +391,22 @@ Raw Resume Text:
         return {}
 
 def load_env():
-    """Manually parse the .env file to load variables without requiring external libraries."""
+    """Load environment variables, checking os.environ, streamlit secrets, and local .env file."""
     env = {}
+    
+    # 1. Check system environment variables
+    if "GROQ_API_KEY" in os.environ:
+        env["GROQ_API_KEY"] = os.environ["GROQ_API_KEY"]
+        
+    # 2. Check Streamlit secrets
+    try:
+        import streamlit as st
+        if "GROQ_API_KEY" in st.secrets:
+            env["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
+    except Exception:
+        pass
+        
+    # 3. Read local .env file if it exists
     if os.path.exists(".env"):
         with open(".env", "r") as f:
             for line in f:
