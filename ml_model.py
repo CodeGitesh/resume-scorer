@@ -107,6 +107,43 @@ def train_job_role_classifier() -> dict:
     return {"train_accuracy": train_acc, "test_accuracy": test_acc}
 
 
+def _load_model_safe(model_path: str, vectorizer_path: str, train_fn) -> tuple:
+    """
+    Load a model and its vectorizer using pickle.
+    If loading fails due to file absence or version mismatch (AttributeError/ValueError/etc.),
+    it automatically triggers the train_fn to retrain and save the models, then retries.
+    """
+    try:
+        if not os.path.exists(model_path) or not os.path.exists(vectorizer_path):
+            print(f"Model or vectorizer not found: {model_path}, {vectorizer_path}. Retraining...")
+            train_fn()
+        with open(vectorizer_path, "rb") as f:
+            vectorizer = pickle.load(f)
+        with open(model_path, "rb") as f:
+            model = pickle.load(f)
+        # Dry run to catch potential scikit-learn version mismatch errors
+        dummy_vec = vectorizer.transform(["dummy text"])
+        _ = model.predict_proba(dummy_vec)
+        return model, vectorizer
+    except Exception as e:
+        print(f"Error loading models ({model_path}): {e}. Attempting self-healing by retraining...")
+        # Delete corrupt/incompatible files if they exist to force clean regeneration
+        for path in [model_path, vectorizer_path]:
+            if os.path.exists(path):
+                try:
+                    os.remove(path)
+                except Exception:
+                    pass
+        # Retrain
+        train_fn()
+        # Retry once
+        with open(vectorizer_path, "rb") as f:
+            vectorizer = pickle.load(f)
+        with open(model_path, "rb") as f:
+            model = pickle.load(f)
+        return model, vectorizer
+
+
 def predict_job_category(resume_text: str) -> dict:
     """
     Predict the job category for a given resume text.
@@ -115,19 +152,15 @@ def predict_job_category(resume_text: str) -> dict:
     -------
     dict  {"category": str, "confidence": float}
     """
-    if not os.path.exists(os.path.join("models", "tfidf_vectorizer.pkl")) or not os.path.exists(os.path.join("models", "resume_classifier.pkl")):
-        train_job_role_classifier()
-        
-    with open(os.path.join("models", "tfidf_vectorizer.pkl"), "rb") as f:
-        tfidf = pickle.load(f)
-    with open(os.path.join("models", "resume_classifier.pkl"), "rb") as f:
-        knn = pickle.load(f)
+    model_path = os.path.join("models", "resume_classifier.pkl")
+    vectorizer_path = os.path.join("models", "tfidf_vectorizer.pkl")
+    knn, tfidf = _load_model_safe(model_path, vectorizer_path, train_job_role_classifier)
 
     cleaned = clean_resume_text(resume_text)
     vec = tfidf.transform([cleaned])
     proba = knn.predict_proba(vec)[0]
     idx = np.argmax(proba)
-    category = knn.classes_[idx]
+    category = str(knn.classes_[idx])
     confidence = float(proba[idx])
     return {"category": category, "confidence": round(confidence, 4)}
 
@@ -293,30 +326,74 @@ def _get_bullet_dataset() -> tuple:
     if os.path.exists(data_path):
         try:
             df = pd.read_csv(data_path)
-            action_verbs = {"developed", "led", "managed", "created", "built", "improved", "designed", "optimized", "spearheaded", "implemented", "delivered", "reduced", "increased", "achieved", "solved", "architected", "automated"}
+            action_verbs = {
+                "developed", "led", "managed", "created", "built", "improved", "designed",
+                "optimized", "spearheaded", "implemented", "delivered", "reduced", "increased",
+                "achieved", "solved", "architected", "automated", "analyzed", "coordinated",
+                "initiated", "established", "facilitated", "supervised", "directed", "constructed",
+                "engineered", "formulated", "launched", "operated", "organized", "produced",
+                "revamped", "restructured", "streamlined", "transformed", "upgraded"
+            }
+
+            weak_phrases = [
+                "responsible for", "helped with", "assisted", "worked on", "participated in",
+                "member of", "duties included", "handled", "involved in", "part of"
+            ]
+
+            heading_words = {
+                'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october',
+                'november', 'december', 'university', 'college', 'school', 'pune', 'mumbai', 'india', 'education',
+                'details', 'exprience', 'company'
+            }
             
             for resume_text in df["Resume"]:
                 if not isinstance(resume_text, str):
                     continue
-                # Split text into lines
+                # Split text into lines using common bullet/newline separators
+                resume_text = resume_text.replace('*', '\n').replace('•', '\n').replace('-', '\n')
                 lines = [line.strip() for line in resume_text.split("\n")]
                 for line in lines:
-                    if len(line) < 20 or len(line) > 250:
+                    if len(line) < 15 or len(line) > 250:
                         continue
                     
-                    # Heuristics for Distant labeling
                     words = [w.lower() for w in re.findall(r'\b[a-zA-Z]+\b', line)]
                     if not words:
                         continue
                     
-                    has_action = any(w in action_verbs for w in words)
-                    has_metric = bool(re.search(r'\b\d+%\b|\$\d+|\b\d+\b', line))
-                    length_ok = len(words) >= 6
+                    # Ignore education, heading, date lines
+                    if any(w in heading_words for w in words):
+                        continue
                     
-                    if has_action and has_metric and length_ok:
+                    score = 0
+                    has_action = any(w in action_verbs for w in words)
+                    
+                    if not has_action:
+                        # Must have an action verb to be strong; otherwise if no metric, it's weak
+                        has_metric = bool(re.search(r'\b\d+%\b|\$\d+|\b\d+\b', line))
+                        if not has_metric:
+                            weak_extracted.append(line)
+                        continue
+                    
+                    score += 2
+                    
+                    # 2. Metric check
+                    has_metric = bool(re.search(r'\b\d+%\b|\$\d+|\b\d+\b', line))
+                    if has_metric:
+                        score += 2
+                        
+                    # 3. Length check
+                    length_ok = 8 <= len(words) <= 35
+                    if length_ok:
+                        score += 1
+                        
+                    # 4. Weak phrase check
+                    line_lower = line.lower()
+                    has_weak = any(wp in line_lower for wp in weak_phrases)
+                    if has_weak:
+                        score -= 2
+                        
+                    if score >= 3:
                         strong_extracted.append(line)
-                    elif not has_action and not has_metric:
-                        weak_extracted.append(line)
         except Exception as e:
             print(f"Error loading dataset for weak supervision: {e}")
             
@@ -400,13 +477,9 @@ def classify_bullets(bullet_list: list) -> list:
     -------
     list[dict]  Each dict: {"text": str, "label": "Strong"/"Weak", "confidence": float}
     """
-    if not os.path.exists(os.path.join("models", "bullet_vectorizer.pkl")) or not os.path.exists(os.path.join("models", "bullet_classifier.pkl")):
-        train_bullet_classifier()
-
-    with open(os.path.join("models", "bullet_vectorizer.pkl"), "rb") as f:
-        tfidf = pickle.load(f)
-    with open(os.path.join("models", "bullet_classifier.pkl"), "rb") as f:
-        nb = pickle.load(f)
+    model_path = os.path.join("models", "bullet_classifier.pkl")
+    vectorizer_path = os.path.join("models", "bullet_vectorizer.pkl")
+    nb, tfidf = _load_model_safe(model_path, vectorizer_path, train_bullet_classifier)
 
     X = tfidf.transform(bullet_list)
     probas = nb.predict_proba(X)

@@ -1228,26 +1228,31 @@ if st.session_state.resume_text:
     
     for b in bullets:
         text = b['text']
-        # ResumeWorded Logic checks for Action Verbs and Numbers
-        action_verbs = ["developed", "led", "managed", "created", "built", "improved", "designed", "optimized", "spearheaded", "implemented"]
-        has_action = any(v in text.lower() for v in action_verbs)
-        has_metric = bool(re.search(r'\b\d+%\b|\$\d+|\b\d+\b', text))
+        ml_label = b.get("label", "Weak")
         
         feedback = []
-        # Check for action verb
-        if not has_action:
-            feedback.append("Missing strong action verb (e.g. 'led', 'developed').")
-            
-        # Only require a metric if the bullet describes an impact/achievement/scale
-        impact_words = ["increase", "decrease", "improve", "reduce", "grow", "save", "cut", "boost",
-                        "revenue", "scale", "user", "load", "latency", "time", "speed", "performance",
-                        "cost", "budget", "efficient", "optimize", "accelerate", "expand", "lead", "manage"]
-        needs_metric = any(w in text.lower() for w in impact_words)
         
-        if needs_metric and not has_metric:
-            feedback.append("Missing quantifiable metric (e.g. '20%', '$50k', '5+ developers').")
+        # Only run granular heuristics if ML flagged it as Weak
+        if ml_label == "Weak":
+            # Check for action verb
+            action_verbs = ["developed", "led", "managed", "created", "built", "improved", "designed", "optimized", "spearheaded", "implemented"]
+            has_action = any(v in text.lower() for v in action_verbs)
+            if not has_action:
+                feedback.append("Missing strong action verb (e.g. 'led', 'developed').")
+                
+            # Only require a metric if the bullet describes an outcome/optimization/impact
+            impact_words = ["increase", "decrease", "improve", "reduce", "grow", "save", "cut", "boost",
+                            "revenue", "latency", "speed", "efficient", "optimize", "accelerate", "cost", "budget"]
+            needs_metric = any(w in text.lower() for w in impact_words)
+            has_metric = bool(re.search(r'\b\d+%\b|\$\d+|\b\d+\b', text))
             
-        if not feedback:
+            if needs_metric and not has_metric:
+                feedback.append("Missing quantifiable metric (e.g. '20%', '$50k', '5+ developers').")
+                
+            if not feedback:
+                feedback.append("Could be stronger. Detail the final outcome or scale of your contribution.")
+                
+        if ml_label == "Strong" and not feedback:
             st.markdown(f"<div class='bullet-card b-strong'>✅ <strong>Perfect Impact</strong><br><i>\"{text}\"</i></div>", unsafe_allow_html=True)
         else:
             feedback_str = " | ".join(feedback)
